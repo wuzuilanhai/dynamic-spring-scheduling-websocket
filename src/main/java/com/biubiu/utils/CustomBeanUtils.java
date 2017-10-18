@@ -100,9 +100,8 @@ public class CustomBeanUtils {
      * @param value     域目标值
      */
     public static void setFieldValue(Object target, String fieldName, Object value) {
-        Field field = null;
         try {
-            field = target.getClass().getDeclaredField(fieldName);
+            Field field = target.getClass().getDeclaredField(fieldName);
             field.setAccessible(true);
             field.set(target, value);
         } catch (Exception e) {

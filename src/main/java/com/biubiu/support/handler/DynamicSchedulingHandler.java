@@ -3,6 +3,7 @@ package com.biubiu.support.handler;
 import com.biubiu.config.DynamicSchedulingConfigurer;
 import com.biubiu.constant.SpringScheduleConstants;
 import com.biubiu.utils.CustomBeanUtils;
+import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,12 +11,12 @@ import org.springframework.scheduling.SchedulingException;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.config.ScheduledTask;
 import org.springframework.scheduling.config.TriggerTask;
+import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -28,7 +29,9 @@ public class DynamicSchedulingHandler {
 
     private final String FIELD_SCHEDULED_FUTURES = SpringScheduleConstants.FIELD_SCHEDULED_FUTURES;
 
-    private final Map<String, ScheduledTask> taskMap = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledTask> taskMap = Maps.newConcurrentMap();
+
+    private final Map<String, TriggerTask> triggerMap = Maps.newConcurrentMap();
 
     private Set<ScheduledTask> scheduledTasks = null;
 
@@ -62,13 +65,13 @@ public class DynamicSchedulingHandler {
         TaskScheduler scheduler = configurer.getTaskRegistrar().getScheduler();
         ScheduledFuture<?> future = scheduler.schedule(triggerTask.getRunnable(), triggerTask.getTrigger());
         try {
-            ScheduledTask scheduledTask = null;
             Optional<Object> instance = CustomBeanUtils.newInstance(ScheduledTask.class);
             if (instance.isPresent()) {
-                scheduledTask = (ScheduledTask) instance.get();
+                ScheduledTask scheduledTask = (ScheduledTask) instance.get();
                 CustomBeanUtils.setFieldValue(scheduledTask, SpringScheduleConstants.FIELD_FUTURE_NAME, future);
                 getScheduledTasks().add(scheduledTask);
                 taskMap.put(taskId, scheduledTask);
+                triggerMap.put(taskId, triggerTask);
             }
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
@@ -90,13 +93,16 @@ public class DynamicSchedulingHandler {
     }
 
     /**
-     * 重置任务
+     * 重置任务的间隔
      *
      * @param taskId
-     * @param triggerTask
+     * @param cron
      */
-    public void resetTriggerTask(String taskId, TriggerTask triggerTask) {
+    public void resetTriggerTask(String taskId, String cron) {
         cancelTriggerTask(taskId);
+        TriggerTask triggerTask = triggerMap.get(taskId);
+        CronTrigger cronTrigger = new CronTrigger(cron);
+        CustomBeanUtils.setFieldValue(triggerTask, SpringScheduleConstants.FIELD_TRIGGER_NAME, cronTrigger);
         addTriggerTask(taskId, triggerTask);
     }
 
