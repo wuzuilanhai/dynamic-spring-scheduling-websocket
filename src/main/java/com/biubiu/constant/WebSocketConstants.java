@@ -5,5 +5,5 @@ package com.biubiu.constant;
  */
 public interface WebSocketConstants {
     String DESTINATION_PREFIX = "/topic";
-    String PATH = "/sds-websocket";
+    String PATH = "/xxx";
 }
